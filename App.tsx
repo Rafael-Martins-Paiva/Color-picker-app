@@ -26,118 +26,6 @@ const INACTIVE_BALL_COLOR = '#555555';
 const LAST_SELECTED_COLOR_KEY = '@MyApp:lastSelectedColor'; 
 
 
-const IntroAnimation = ({ onAnimationEnd }: { onAnimationEnd: () => void }) => {
-  const ball1TranslateX = useSharedValue(-INTRO_BALL_DIAMETER * 1.8);
-  const ball2TranslateX = useSharedValue(0);
-  const ball3TranslateX = useSharedValue(INTRO_BALL_DIAMETER * 1.8);
-
-  const colorProgress = useSharedValue(0);
-  const coloredBallsOpacity = useSharedValue(1);
-
-  const whiteRevealBallScale = useSharedValue(0);
-  const whiteRevealBallOpacity = useSharedValue(0);
-
-  const animationDurationMoveAndColor = 800;
-  const animationDurationMergeAndReveal = 1000;
-  const animationTrigger = useSharedValue(0);
-
-  useEffect(() => {
-    'worklet';
-    animationTrigger.value = withDelay(200,
-      withTiming(1, { duration: 0 }, () => {
-        'worklet';
-        const moveAndColorParams = { duration: animationDurationMoveAndColor, easing: Easing.inOut(Easing.ease) };
-        ball1TranslateX.value = withTiming(0, moveAndColorParams);
-        ball3TranslateX.value = withTiming(0, moveAndColorParams);
-        ball2TranslateX.value = withTiming(0, moveAndColorParams, (finishedMove) => {
-          'worklet';
-          if (!finishedMove) return;
-
-          coloredBallsOpacity.value = withTiming(0, { duration: animationDurationMergeAndReveal * 0.3 });
-
-          whiteRevealBallOpacity.value = withDelay(
-            animationDurationMergeAndReveal * 0.1,
-            withTiming(1, { duration: animationDurationMergeAndReveal * 0.2 })
-          );
-          whiteRevealBallScale.value = withDelay(
-            animationDurationMergeAndReveal * 0.1,
-            withTiming(WHITE_REVEAL_MAX_SCALE_FACTOR, {
-              duration: animationDurationMergeAndReveal * 0.9,
-              easing: Easing.bezier(0.60, 0.00, 0.40, 1.00),
-            }, (finishedReveal) => {
-              'worklet';
-              if (!finishedReveal) return;
-              runOnJS(onAnimationEnd)();
-            })
-          );
-        });
-        colorProgress.value = withTiming(1, { duration: animationDurationMoveAndColor * 0.8, easing: Easing.linear });
-      })
-    );
-  
-  }, [onAnimationEnd]);
-
-  const animatedBallStyle = (
-    translateX: Animated.SharedValue<number>,
-    targetColor: string
-  ) =>
-    useAnimatedStyle(() => {
-      'worklet';
-      const currentBgColor = interpolateColor(
-        colorProgress.value,
-        [0, 1],
-        [INACTIVE_BALL_COLOR, targetColor]
-      );
-      return {
-        transform: [{ translateX: translateX.value }],
-        opacity: coloredBallsOpacity.value,
-        backgroundColor: currentBgColor,
-      };
-    });
-
-  const whiteRevealBallAnimatedStyle = useAnimatedStyle(() => {
-    'worklet';
-    return {
-      transform: [{ scale: whiteRevealBallScale.value }],
-      opacity: whiteRevealBallOpacity.value,
-    };
-  });
-
-  return (
-    <View style={styles.introContainer}>
-      <StatusBar barStyle="light-content" backgroundColor="black" />
-      <Animated.View
-        style={[
-          styles.whiteRevealBall,
-          whiteRevealBallAnimatedStyle,
-          { zIndex: 2 }
-        ]}
-      />
-      <View style={[styles.movingBallsContainer, { zIndex: 1 }]}>
-        <Animated.View
-          style={[
-            styles.introBall,
-            animatedBallStyle(ball1TranslateX, introBallInitialColors[0]),
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.introBall,
-            animatedBallStyle(ball2TranslateX, introBallInitialColors[1]),
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.introBall,
-            animatedBallStyle(ball3TranslateX, introBallInitialColors[2]),
-          ]}
-        />
-      </View>
-    </View>
-  );
-};
-
-
 const ColorPickerApp = ({ initialColor }: { initialColor: string }) => {
   const [selectedColor, setSelectedColor] = useState(initialColor); 
   const isLightColor = selectedColor === '#FFCC00' || selectedColor === '#4CD964' || selectedColor === '#5AC8FA' || selectedColor === '#FFFFFF';
@@ -188,7 +76,6 @@ const ColorPickerApp = ({ initialColor }: { initialColor: string }) => {
 }
 
 export default function App() {
-  const [introFinished, setIntroFinished] = useState(false);
   const [initialAppColor, setInitialAppColor] = useState<string | null>(null); 
   const [isLoadingStorage, setIsLoadingStorage] = useState(true); 
 
@@ -198,7 +85,6 @@ export default function App() {
         const storedColor = await AsyncStorage.getItem(LAST_SELECTED_COLOR_KEY);
         if (storedColor) {
           setInitialAppColor(storedColor);
-          setIntroFinished(true); 
         } else {
           setInitialAppColor(appColors[0]); 
           
@@ -214,14 +100,7 @@ export default function App() {
     loadLastColor();
   }, []);
 
-  const handleIntroEnd = useCallback(() => {
-    setIntroFinished(true);
-    
-    
-    
-    
-    
-  }, []);
+
 
   if (isLoadingStorage) {
     
@@ -232,11 +111,6 @@ export default function App() {
       </View>
     );
   }
-
-  if (!introFinished) {
-    return <IntroAnimation onAnimationEnd={handleIntroEnd} />;
-  }
-
   
   
   if (!initialAppColor) {
@@ -298,7 +172,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   selectedBallDark: {
-    borderColor: '#000',
+    borderColor: '#FFF', // mudei de ideia no meio do caminho, agora é branco para todos. e vai ficar assim mesmo. preguiça de mudar o código de novo :D
   },
   selectedBallLight: {
     borderColor: '#FFF',
@@ -311,8 +185,5 @@ const styles = StyleSheet.create({
   previewText: {
     fontSize: 18,
     fontWeight: 'bold',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
 });

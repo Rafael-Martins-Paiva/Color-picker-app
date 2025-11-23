@@ -24,7 +24,7 @@ npm install
 você vai precisar rodar os seguintes comandos
 
 ``` bash
-nom start
+npx expo start
 ```
 
    
